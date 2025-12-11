@@ -4,8 +4,54 @@
 <meta charset="UTF-8">
 <title>Système de paie sécurisé</title>
 <style>
-body{font-family:"Arial",sans-serif;background:#f0f4ff;margin:0;padding:0;}
-.container{max-width:1200px;margin:30px auto;background:white;padding:25px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,0.2);}
+/* ===== خلفية كاملة ===== */
+body {
+    font-family: "Arial", sans-serif;
+    background: url('tulum-bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    padding: 0;
+    color: #fff;
+}
+
+
+/* ===== زروا Mode في وسط الصفحة ===== */
+.center-mode {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:30px;
+    height:100vh;
+}
+.center-mode button {
+    background: linear-gradient(145deg, #4caf50, #2e7d32);
+    color:#fff;
+    font-size:20px;
+    font-weight:bold;
+    padding:20px 40px;
+    border:none;
+    border-radius:50px;
+    cursor:pointer;
+    box-shadow:0 8px 15px rgba(0,0,0,0.2);
+    transition:all 0.3s ease;
+}
+.center-mode button:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow:0 12px 20px rgba(0,0,0,0.3);
+}
+
+/* ===== Container ===== */
+.container{
+    max-width:1200px;
+    margin:30px auto;
+    background: rgba(255,255,255,0.95);
+    padding:25px;
+    border-radius:15px;
+    box-shadow:0 8px 25px rgba(0,0,0,0.2);
+    color:#000;
+}
+
+/* ===== Styles tables & rows ===== */
 h2{text-align:center;margin-bottom:20px;color:#2c3e50;}
 .row{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:20px;}
 input,select,button{padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;transition:all 0.3s;}
@@ -25,18 +71,22 @@ button:hover{background:#005bbb;}
 .full{background:#c1ffe4;}
 .salary-box{background:#e3f4ff;padding:20px;border-radius:12px;margin-top:20px;font-size:18px;text-align:center;font-weight:bold;transition:all 0.3s;}
 .hidden{display:none;}
+.gallery{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-top:20px;}
+.gallery img{width:200px;height:150px;object-fit:cover;border-radius:10px;transition:transform 0.3s;}
+.gallery img:hover{transform:scale(1.1);}
 @media(max-width:800px){.row{flex-direction:column;}}
 </style>
 </head>
 <body>
-<div class="container">
-<h2>📅 Système de paie sécurisé</h2>
 
-<!-- Choix mode -->
-<div class="row">
-<button onclick="showAdmin()">Mode Admin</button>
-<button onclick="showEmployee()">Mode Employé</button>
+<!-- ===== شاشة اختيار الوضع ===== -->
+<div class="center-mode">
+  <button onclick="showAdmin()">Mode Admin</button>
+  <button onclick="showEmployee()">Mode Employé</button>
 </div>
+
+<!-- ===== Container ===== -->
+<div class="container hidden" id="mainContainer">
 
 <!-- ======= Admin ======= -->
 <div id="admin" class="hidden">
@@ -102,12 +152,30 @@ button:hover{background:#005bbb;}
 </div>
 </div>
 
+<!-- ===== Galerie Tulum ===== -->
+<h3 style="text-align:center;margin-top:40px;">🌴 Galerie Tulum</h3>
+<div class="gallery">
+    <img src="tulum1.jpg" alt="Tulum 1">
+    <img src="tulum2.jpg" alt="Tulum 2">
+    <img src="tulum3.jpg" alt="Tulum 3">
+</div>
+
 <script>
 let workers=JSON.parse(localStorage.getItem("workers")||"[]");
 
 // ===== Admin / Employee Mode =====
-function showAdmin(){document.getElementById("admin").classList.remove("hidden");document.getElementById("employee").classList.add("hidden");}
-function showEmployee(){document.getElementById("employee").classList.remove("hidden");document.getElementById("admin").classList.add("hidden");}
+function showAdmin(){
+  document.getElementById("mainContainer").classList.remove("hidden");
+  document.getElementById("admin").classList.remove("hidden");
+  document.getElementById("employee").classList.add("hidden");
+  document.querySelector('.center-mode').style.display='none';
+}
+function showEmployee(){
+  document.getElementById("mainContainer").classList.remove("hidden");
+  document.getElementById("employee").classList.remove("hidden");
+  document.getElementById("admin").classList.add("hidden");
+  document.querySelector('.center-mode').style.display='none';
+}
 
 // ===== Admin functions =====
 function saveWorkers(){localStorage.setItem("workers",JSON.stringify(workers));}
@@ -127,7 +195,16 @@ workers.forEach((w,i)=>{list.innerHTML+=`<div class="worker-card"><b>${w.name}</
 function deleteWorker(i){workers.splice(i,1);saveWorkers();displayWorkers();updateWorkerSelect();}
 function updateWorkerSelect(){let sel=document.getElementById("workerSelect");sel.innerHTML="<option value=''>Choisir un employé</option>";workers.forEach((w,i)=>{sel.innerHTML+=`<option value='${i}'>${w.name}</option>`;});}
 function getDaysInMonth(month,year=2025){return new Date(year,month,0).getDate();}
-function loadWorkerCalendar(){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;let days=getDaysInMonth(month);if(!w.attendance[month])w.attendance[month]=Array(days).fill("none");if(w.advance[month]===undefined)w.advance[month]=0;document.getElementById("advance").value=w.advance[month];let table=document.getElementById("calendar");table.innerHTML=`<tr><th>Jour</th><th>État</th></tr>`;w.attendance[month].forEach((s,i)=>{table.innerHTML+=`<tr><td>${i+1}</td><td id="day${i+1}" class="${s}" onclick="toggleDay(${i+1})">${getLabel(s)}</td></tr>`;});saveWorkers();}
+function loadWorkerCalendar(){
+let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;
+let w=workers[index];let month=document.getElementById("month").value;let days=getDaysInMonth(month);
+if(!w.attendance[month])w.attendance[month]=Array(days).fill("none");
+if(w.advance[month]===undefined)w.advance[month]=0;
+document.getElementById("advance").value=w.advance[month];
+let table=document.getElementById("calendar");table.innerHTML=`<tr><th>Jour</th><th>État</th></tr>`;
+w.attendance[month].forEach((s,i)=>{table.innerHTML+=`<tr><td>${i+1}</td><td id="day${i+1}" class="${s}" onclick="toggleDay(${i+1})">${getLabel(s)}</td></tr>`;});
+saveWorkers();
+}
 function getLabel(s){switch(s){case"morning":return"☀ Matin (1)";case"evening":return"🌙 Soir (1)";case"full":return"✔ Journée complète (2)";default:return"❌ Absence (0)";}}
 function toggleDay(day){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;const order=["none","morning","evening","full"];let cur=w.attendance[month][day-1];let next=order[(order.indexOf(cur)+1)%4];w.attendance[month][day-1]=next;document.getElementById("day"+day).className=next;document.getElementById("day"+day).innerHTML=getLabel(next);saveWorkers();}
 function updateAdvance(){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;let adv=parseFloat(document.getElementById("advance").value)||0;w.advance[month]=adv;saveWorkers();}
