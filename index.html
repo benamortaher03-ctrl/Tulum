@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Système de paie sécurisé</title>
+<style>
+body{font-family:"Arial",sans-serif;background:#f0f4ff;margin:0;padding:0;}
+.container{max-width:1200px;margin:30px auto;background:white;padding:25px;border-radius:15px;box-shadow:0 8px 25px rgba(0,0,0,0.2);}
+h2{text-align:center;margin-bottom:20px;color:#2c3e50;}
+.row{display:flex;flex-wrap:wrap;gap:15px;margin-bottom:20px;}
+input,select,button{padding:10px;font-size:15px;border:1px solid #ccc;border-radius:8px;transition:all 0.3s;}
+input:focus,select:focus{border-color:#0088ff;outline:none;box-shadow:0 0 5px rgba(0,136,255,0.4);}
+button{background:#0088ff;color:white;font-weight:bold;cursor:pointer;}
+button:hover{background:#005bbb;}
+.worker-list{margin-top:20px;}
+.worker-card{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;background:#f0f8ff;transition:transform 0.3s,box-shadow 0.3s;}
+.worker-card:hover{transform:translateY(-3px);box-shadow:0 5px 15px rgba(0,0,0,0.1);}
+.delete{background:#ff4d4d;padding:5px 12px;border-radius:5px;cursor:pointer;color:white;font-weight:bold;}
+.delete:hover{background:#c70000;}
+.calendar-table{width:100%;margin-top:20px;border-collapse:collapse;}
+.calendar-table th,.calendar-table td{border:1px solid #bbb;padding:10px;text-align:center;transition:all 0.3s;user-select:none;}
+.none{background:#ffd0d0;}
+.morning{background:#d6ffd6;}
+.evening{background:#d6e5ff;}
+.full{background:#c1ffe4;}
+.salary-box{background:#e3f4ff;padding:20px;border-radius:12px;margin-top:20px;font-size:18px;text-align:center;font-weight:bold;transition:all 0.3s;}
+.hidden{display:none;}
+@media(max-width:800px){.row{flex-direction:column;}}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>📅 Système de paie sécurisé</h2>
+
+<!-- Choix mode -->
+<div class="row">
+<button onclick="showAdmin()">Mode Admin</button>
+<button onclick="showEmployee()">Mode Employé</button>
+</div>
+
+<!-- ======= Admin ======= -->
+<div id="admin" class="hidden">
+<h3>👨‍💼 Admin</h3>
+<div class="row">
+<input type="text" id="workerName" placeholder="Nom de l'employé">
+<input type="number" id="dailySalary" placeholder="Salaire journalier">
+<input type="text" id="workerCode" placeholder="Code employé (4 chiffres)">
+<button onclick="addWorker()">➕ Ajouter employé</button>
+</div>
+<div class="worker-list" id="workerList"></div>
+
+<hr>
+<div class="row">
+<select id="workerSelect" onchange="loadWorkerCalendar()"></select>
+<select id="month" onchange="loadWorkerCalendar()">
+<option value="1">Janvier</option>
+<option value="2">Février</option>
+<option value="3">Mars</option>
+<option value="4">Avril</option>
+<option value="5">Mai</option>
+<option value="6">Juin</option>
+<option value="7">Juillet</option>
+<option value="8">Août</option>
+<option value="9">Septembre</option>
+<option value="10">Octobre</option>
+<option value="11">Novembre</option>
+<option value="12">Décembre</option>
+</select>
+<input type="number" id="advance" placeholder="Avance du mois" onchange="updateAdvance()">
+</div>
+
+<table class="calendar-table" id="calendar"></table>
+<button onclick="calculateSalary()">💰 Calculer le salaire du mois</button>
+<div id="result" class="salary-box"></div>
+</div>
+
+<!-- ======= Employé ======= -->
+<div id="employee" class="hidden">
+<h3>👤 Employé</h3>
+<div class="row">
+<input type="text" id="codeInput" placeholder="Entrez votre code">
+<button onclick="loginEmployee()">Se connecter</button>
+</div>
+<div id="employeeSection" class="hidden">
+<h4 id="empName"></h4>
+<select id="monthEmp" onchange="loadEmployeeCalendar()">
+<option value="1">Janvier</option>
+<option value="2">Février</option>
+<option value="3">Mars</option>
+<option value="4">Avril</option>
+<option value="5">Mai</option>
+<option value="6">Juin</option>
+<option value="7">Juillet</option>
+<option value="8">Août</option>
+<option value="9">Septembre</option>
+<option value="10">Octobre</option>
+<option value="11">Novembre</option>
+<option value="12">Décembre</option>
+</select>
+<table class="calendar-table" id="calendarEmp"></table>
+<div id="salaryEmp" class="salary-box"></div>
+</div>
+</div>
+
+<script>
+let workers=JSON.parse(localStorage.getItem("workers")||"[]");
+
+// ===== Admin / Employee Mode =====
+function showAdmin(){document.getElementById("admin").classList.remove("hidden");document.getElementById("employee").classList.add("hidden");}
+function showEmployee(){document.getElementById("employee").classList.remove("hidden");document.getElementById("admin").classList.add("hidden");}
+
+// ===== Admin functions =====
+function saveWorkers(){localStorage.setItem("workers",JSON.stringify(workers));}
+function addWorker(){
+let name=document.getElementById("workerName").value.trim();
+let salary=parseFloat(document.getElementById("dailySalary").value);
+let code=document.getElementById("workerCode").value.trim();
+if(!name||!salary||!code){alert("Remplissez tous les champs");return;}
+if(workers.some(w=>w.code===code)){alert("Code déjà utilisé");return;}
+workers.push({name:name,dailySalary:salary,code:code,attendance:{},advance:{}});
+saveWorkers();displayWorkers();updateWorkerSelect();
+}
+function displayWorkers(){
+let list=document.getElementById("workerList");list.innerHTML="";
+workers.forEach((w,i)=>{list.innerHTML+=`<div class="worker-card"><b>${w.name}</b><span class="delete" onclick="deleteWorker(${i})">🗑 Supprimer</span></div>`;});
+}
+function deleteWorker(i){workers.splice(i,1);saveWorkers();displayWorkers();updateWorkerSelect();}
+function updateWorkerSelect(){let sel=document.getElementById("workerSelect");sel.innerHTML="<option value=''>Choisir un employé</option>";workers.forEach((w,i)=>{sel.innerHTML+=`<option value='${i}'>${w.name}</option>`;});}
+function getDaysInMonth(month,year=2025){return new Date(year,month,0).getDate();}
+function loadWorkerCalendar(){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;let days=getDaysInMonth(month);if(!w.attendance[month])w.attendance[month]=Array(days).fill("none");if(w.advance[month]===undefined)w.advance[month]=0;document.getElementById("advance").value=w.advance[month];let table=document.getElementById("calendar");table.innerHTML=`<tr><th>Jour</th><th>État</th></tr>`;w.attendance[month].forEach((s,i)=>{table.innerHTML+=`<tr><td>${i+1}</td><td id="day${i+1}" class="${s}" onclick="toggleDay(${i+1})">${getLabel(s)}</td></tr>`;});saveWorkers();}
+function getLabel(s){switch(s){case"morning":return"☀ Matin (1)";case"evening":return"🌙 Soir (1)";case"full":return"✔ Journée complète (2)";default:return"❌ Absence (0)";}}
+function toggleDay(day){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;const order=["none","morning","evening","full"];let cur=w.attendance[month][day-1];let next=order[(order.indexOf(cur)+1)%4];w.attendance[month][day-1]=next;document.getElementById("day"+day).className=next;document.getElementById("day"+day).innerHTML=getLabel(next);saveWorkers();}
+function updateAdvance(){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index))return;let w=workers[index];let month=document.getElementById("month").value;let adv=parseFloat(document.getElementById("advance").value)||0;w.advance[month]=adv;saveWorkers();}
+function calculateSalary(){let sel=document.getElementById("workerSelect");let index=parseInt(sel.value);if(isNaN(index)){alert("Choisir un employé");return;}let w=workers[index];let month=document.getElementById("month").value;let units=0;w.attendance[month].forEach(s=>{if(s==="morning")units+=1;if(s==="evening")units+=1;if(s==="full")units+=2;});let salary=(units*w.dailySalary)-w.advance[month];document.getElementById("result").innerHTML=`Employé: <b>${w.name}</b><br>Total des unités: <b>${units}</b><br>Salaire journalier: <b>${w.dailySalary} €</b><br>Avance: <b>${w.advance[month]} €</b><br>💰 Salaire final du mois: <b>${salary} €</b>`;}
+
+// ===== Employee functions (Read-Only) =====
+let currentEmp=null;
+function loginEmployee(){
+let code=document.getElementById("codeInput").value.trim();
+let emp=workers.find(w=>w.code===code);
+if(!emp){alert("Code invalide");return;}
+currentEmp=emp;
+document.getElementById("employeeSection").classList.remove("hidden");
+document.getElementById("empName").innerText="Bonjour, "+emp.name;
+loadEmployeeCalendar();
+}
+function loadEmployeeCalendar(){
+if(!currentEmp)return;
+let month=document.getElementById("monthEmp").value;
+let days=getDaysInMonth(month);
+if(!currentEmp.attendance[month])currentEmp.attendance[month]=Array(days).fill("none");
+let table=document.getElementById("calendarEmp");table.innerHTML=`<tr><th>Jour</th><th>État</th></tr>`;
+currentEmp.attendance[month].forEach((s,i)=>{
+table.innerHTML+=`<tr><td>${i+1}</td><td class="${s}">${getLabel(s)}</td></tr>`;
+});
+let units=0;
+currentEmp.attendance[month].forEach(s=>{if(s==="morning")units+=1;if(s==="evening")units+=1;if(s==="full")units+=2;});
+let salary=(units*currentEmp.dailySalary)-(currentEmp.advance[month]||0);
+document.getElementById("salaryEmp").innerHTML=`Total des unités: <b>${units}</b><br>Salaire journalier: <b>${currentEmp.dailySalary} €</b><br>Avance: <b>${currentEmp.advance[month]||0} €</b><br>💰 Salaire final du mois: <b>${salary} €</b>`;
+}
+
+displayWorkers();
+updateWorkerSelect();
+</script>
+</body>
+</html>
